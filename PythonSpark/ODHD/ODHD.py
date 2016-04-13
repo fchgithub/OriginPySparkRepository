@@ -98,10 +98,13 @@ def toVector(line):
         
     
 def main():
+    '''
+         Git Setup
+    '''
     spark_conf = SparkConf().setAppName("Different-Sampling data").setMaster("local[8]")
     sc = SparkContext(conf= spark_conf)
     #rdd = sc.textFile('pre-data.txt', minPartitions = 10)
-    rdd = sc.textFile('D:\Dropbox\PythonSpark\ODHD\pre-data.txt' , minPartitions = 1)
+    rdd = sc.textFile('D:\pre-data.txt' , minPartitions = 1)
     vectorRDD = rdd.map(toVector)
     rdd.unpersist()
     #myODHD = ODHD_Ensemble()
