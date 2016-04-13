@@ -8,7 +8,7 @@ from __future__ import print_function
 from pyspark import SparkContext, SparkConf
 import numpy as np
 from scipy.stats import chisquare
-import ParallelGA as pg
+import ParallelGA as GA
 import profile
 import pstats
 
@@ -110,7 +110,7 @@ def main():
     #sampleRDD = myODHD.spark_self_Sampling(vectorRDD, percetage_of_sample)
     #data_dimension = len(vectorRDD.first())
     #print('data dimension: ', data_dimension)
-    pg.Parallel_GA_main(vectorRDD,sc)#, sizeOfDataset, data_dimension)
+    GA.Parallel_GA_main(vectorRDD,sc)#, sizeOfDataset, data_dimension)
     
     sc.stop()
     
