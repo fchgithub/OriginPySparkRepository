@@ -103,6 +103,7 @@ def main():
         The Opposit checking
         added from laptop
         from PC hala
+        hala from laptop
     '''
     spark_conf = SparkConf().setAppName("Different-Sampling data").setMaster("local[8]")
     sc = SparkContext(conf= spark_conf)
