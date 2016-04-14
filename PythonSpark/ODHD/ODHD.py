@@ -101,6 +101,7 @@ def main():
     '''
          Git Setup
         The Opposit checking
+        added from laptop
     '''
     spark_conf = SparkConf().setAppName("Different-Sampling data").setMaster("local[8]")
     sc = SparkContext(conf= spark_conf)
