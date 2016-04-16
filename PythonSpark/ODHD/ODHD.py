@@ -99,16 +99,15 @@ def toVector(line):
     
 def main():
     '''
-         Git Setup
-        The Opposit checking
-        added from laptop
-        from PC hala
-        hala from laptop
+        All setup with Git
+        Instruction:
+        - Changes from laptop captioned: "Laptop-Date" like Laptop-April-14-2016
+        - Changes from PC captioned: "PC-Date" like PC-April-14-2016
     '''
     spark_conf = SparkConf().setAppName("Different-Sampling data").setMaster("local[8]")
     sc = SparkContext(conf= spark_conf)
-    #rdd = sc.textFile('pre-data.txt', minPartitions = 10)
-    rdd = sc.textFile('D:\pre-data.txt' , minPartitions = 1)
+    rdd = sc.textFile('pre-data.txt', minPartitions = 3)
+#     rdd = sc.textFile('D:\DataSetCollection\FMA.csv' , minPartitions = 1)
     vectorRDD = rdd.map(toVector)
     rdd.unpersist()
     #myODHD = ODHD_Ensemble()

@@ -26,9 +26,6 @@ def Parallel_GA_main(rdd, sc):
     print("Program_Start:", localtime)
     rngdivision = [4]
     prjSizes = [3]
-    
-    solution = list()
-    dictionary = dict()
     localtime = time.asctime( time.localtime(time.time()) )
     print("min, max variable reduces_Start:", localtime)
     all_attr_maxs = rdd.reduce(maxFunc)
@@ -62,8 +59,8 @@ def Parallel_GA_main(rdd, sc):
 
     
 def rankedPop(population, rdd, all_attr_maxs, all_attr_mins, sizeOfDataset, prjrng, sc):
-    rankedPopulation = fitnessFunc_integrated(rdd, population, all_attr_maxs, all_attr_mins, sizeOfDataset, prjrng, sc)
-    #rankedPopulation = fintessFunc_perInd(rdd, population, all_attr_maxs, all_attr_mins, sizeOfDataset, prjrng, sc)
+    #rankedPopulation = fitnessFunc_integrated(rdd, population, all_attr_maxs, all_attr_mins, sizeOfDataset, prjrng, sc)
+    rankedPopulation = fintessFunc_perInd(rdd, population, all_attr_maxs, all_attr_mins, sizeOfDataset, prjrng, sc)
     rankedPopulation.sort(key=lambda tup: tup[1], reverse=True)  
     return rankedPopulation
 
