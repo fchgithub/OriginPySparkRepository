@@ -15,7 +15,7 @@ import CustomKey
 
 # Global Variables
 ellitNum = 2
-popNum = 10
+popNum = 20
 crossover_rate = 0.7
 mutation_rate = 0.2
 dimLength = 0
