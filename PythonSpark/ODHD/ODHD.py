@@ -104,12 +104,13 @@ def main():
         - Changes from laptop captioned: "Laptop-Date" like Laptop-April-14-2016
         - Changes from PC captioned: "PC-Date" like PC-April-14-2016
     '''
-    spark_conf = SparkConf().setAppName("Different-Sampling data").setMaster("local[8]")
+    spark_conf = SparkConf().setAppName("Different-Sampling data").setMaster("local[12]")
     sc = SparkContext(conf= spark_conf)
-    rdd = sc.textFile('pre-data.txt', minPartitions = 3)
-#     rdd = sc.textFile('D:\DataSetCollection\FMA.csv' , minPartitions = 1)
+    rdd = sc.textFile('/user/kddhadoop/inputs/pre-data.txt') #, minPartitions = 10)
+#    rdd = sc.textFile('D:\DataSetCollection\FMA.csv' , minPartitions = 1)
     vectorRDD = rdd.map(toVector)
-    rdd.unpersist()
+    #print(vectorRDD.first())
+    #rdd.unpersist()
     #myODHD = ODHD_Ensemble()
     #percetage_of_sample = 0.3
     #sizeOfDataset = vectorRDD.count()  
