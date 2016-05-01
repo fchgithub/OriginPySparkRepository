@@ -28,6 +28,9 @@ def Parallel_GA_main(rdd, sc):
     prjSizes = [3]
     localtime = time.asctime( time.localtime(time.time()) )
     print("min, max variable reduces_Start:", localtime)
+#     cnt = rdd.map(lambda point: 0 if(len(point) == 1380) else 1)
+#     broken_lines = cnt.reduce(add)
+#     print("there are ", broken_lines, " Broken lines")
     all_attr_maxs = rdd.reduce(maxFunc)
     all_attr_mins = rdd.reduce(minFunc)
     localtime = time.asctime( time.localtime(time.time()) )
@@ -35,7 +38,7 @@ def Parallel_GA_main(rdd, sc):
     global dimLength
     dimLength = len(all_attr_maxs)
     sizeOfDataset = rdd.count()
-    print('\nsize of dataset: ', sizeOfDataset, '\ndimension: ', dimLength)
+    print('/n size of dataset: ', sizeOfDataset, '\ndimension: ', dimLength)
     rdd.cache()
     for psize in prjSizes:
         for rng in rngdivision:
@@ -109,7 +112,7 @@ def fitnessFunc(rdd, individual, all_attr_maxs, all_attr_mins, sizeOfDataset, pr
     sumPointsInCellRDD = map2CellRDD.reduceByKey(lambda a, b: a + b)
     cellsWithPoint = sumPointsInCellRDD.count()
     
-    aver = sizeOfDataset / num_of_cells 
+    aver = float(sizeOfDataset) / num_of_cells 
     emptyCells = num_of_cells - cellsWithPoint
     zigma = 150
     '''
@@ -245,8 +248,14 @@ def stopCondition(stop_type, itr, convergens=0.5):
         return False if itr < end_itr else True
     else: 
         return False if convergens < alpha else True
-
+    
 def maxFunc(a, b):
+    if(len(a) != len(b)):
+        print("/n ERROR: A's length is ", len(a) , " len B is ", len(b))
+        if(len(a) != 1380):
+            print(a[1:30])
+        if(len(b) != 1380):
+            print(b[1:30])
     maxs = [None] * len(a)
     for i in range(len(a)):
         maxs[i] = a[i] if a[i] >= b[i] else b[i]
