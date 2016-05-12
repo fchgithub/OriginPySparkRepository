@@ -3,6 +3,7 @@ Created on Jan 21, 2016
 
 @author: Fatemeh
 '''
+from __future__ import  print_function
 import random
 import numpy as np
 import functools
@@ -12,53 +13,54 @@ import math
 import itertools
 import time
 import CustomKey
-
 # Global Variables
-ellitNum = 2
-popNum = 20
+ellitNum = 1
+popNum = 4
 crossover_rate = 0.7
 mutation_rate = 0.2
 dimLength = 0
 numofGeneration = 1
 
 def Parallel_GA_main(rdd, sc):
-    localtime = time.asctime( time.localtime(time.time()) )
-    print("Program_Start:", localtime)
+    logInConsole(1, "main method started!")
     rngdivision = [4]
     prjSizes = [3]
-    localtime = time.asctime( time.localtime(time.time()) )
-    print("min, max variable reduces_Start:", localtime)
-#     cnt = rdd.map(lambda point: 0 if(len(point) == 1380) else 1)
-#     broken_lines = cnt.reduce(add)
-#     print("there are ", broken_lines, " Broken lines")
-    all_attr_maxs = rdd.reduce(maxFunc)
-    all_attr_mins = rdd.reduce(minFunc)
-    localtime = time.asctime( time.localtime(time.time()) )
-    print("min, max variable reduces_Stop:", localtime)
+    logInConsole(2, "REDUCE IN PROGRESS: Getting Min and Max of all data dimensions: START!")
+    # pre-proccessing step to find min and max of attributes just once not everytime in running code 
+    #all_attr_maxs = rdd.reduce(maxFunc)
+    #save_to_file(all_attr_maxs, 'max3')
+    #logInConsole(2, "REDUCE IN PROGRESS: Getting done Max of all data dimensions: Done!")
+    #all_attr_mins = rdd.reduce(minFunc)
+    #save_to_file(all_attr_mins, 'min2')
+
+    all_attr_maxs = np.loadtxt("/home/kddhadoop/DataInputs/max.out", delimiter = ',')
+    all_attr_mins = np.loadtxt('/home/kddhadoop/DataInputs/min.out', delimiter = ',')
+    logInConsole(2, "REDUCE IN PROGRESS: Getting Min and Max of all data dimensions: FINISH!")
+    # to change the value of a global variable
     global dimLength
     dimLength = len(all_attr_maxs)
-    sizeOfDataset = rdd.count()
-    print('/n size of dataset: ', sizeOfDataset, '\ndimension: ', dimLength)
+    sizeOfDataset = 77000#rdd.count()
     rdd.cache()
+    logInConsole(3, "Computing fitness function for all genes: START!")
     for psize in prjSizes:
         for rng in rngdivision:
             population = generatePop(dimLength, psize)
-            # population = tempGeneratePop(dimLength, psize)    
+            #population = tempGeneratePop(dimLength, psize)    
             itr = 0
     # while not stopCondition(1, itr):
             while itr < numofGeneration:
                 print ('\nCurrent iterations:', itr)
                 rankedPopulation = rankedPop(population, rdd, all_attr_maxs, all_attr_mins, sizeOfDataset, rng,sc)
-                # tempPrintrankedPopulation(rankedPopulation)
+                tempPrintrankedPopulation(rankedPopulation)
                 population = iteratePop(rankedPopulation)
                 
                 itr += 1
     #rankedPopulation = rankedPop(population, rdd, all_attr_maxs, all_attr_mins, sizeOfDataset, rngdivision[0])           
 
-    localtime = time.asctime( time.localtime(time.time()) )
-    print("Program_Stop:", localtime)    
-    print('\nProgram Terminated!')
-    print('\nSet of Solutions: ', rankedPopulation)
+#     localtime = time.asctime( time.localtime(time.time()) )
+#     print("Program_Stop:", localtime)    
+#     print('\nProgram Terminated!')
+#     print('\nSet of Solutions: ', rankedPopulation)
 
     
 def rankedPop(population, rdd, all_attr_maxs, all_attr_mins, sizeOfDataset, prjrng, sc):
@@ -107,9 +109,13 @@ def fitnessFunc(rdd, individual, all_attr_maxs, all_attr_mins, sizeOfDataset, pr
     
     num_of_cells = prjRng ** len(individual)
    
-    map2CellRDD = rdd.map(lambda point: (assign2Cell(point, individual, \
-                                                     maxs, mins, prjRng), 1))
+    #map2CellRDD = rdd.map(lambda point: (assign2Cell(point, individual, \
+    #                                                 maxs, mins, prjRng), 1))
+    map2CellRDD = rdd.map(lambda p : (2,1))
+    map2CellRDD.first()
     sumPointsInCellRDD = map2CellRDD.reduceByKey(lambda a, b: a + b)
+    map2CellRDD.unpersist()
+    sumPointsInCellRDD.cache()
     cellsWithPoint = sumPointsInCellRDD.count()
     
     aver = float(sizeOfDataset) / num_of_cells 
@@ -219,11 +225,14 @@ def steady_State_Selection(fitnessScores):
         return selected, k
     
 def generatePop(dimension, projectionSize):
-    ''' generatePop(dimension, projectionSize) -> list of population
+    ''' generates initial population with number of popNum(global variable)
+        with the dimension projectionSize. 
+        randomly picks the positions and sort them then add to a list and return it
     '''
     population, individual = [], []
+    rangeDimension = range(dimension)
     for eachIndividual in range(popNum):
-        individual = random.sample(range(dimension), projectionSize)
+        individual = random.sample(rangeDimension, projectionSize)
         individual.sort()
         population.append(individual)
     return population
@@ -238,6 +247,7 @@ def tempGeneratePop(dimension, projectionSize):
     return [list(x)for x in set(itertools.combinations(lst, projectionSize))]
 
 def tempPrintrankedPopulation(rankedPopulation):
+    print("\n")
     for ind in rankedPopulation:
         print(ind[0], ' - ', ind[1])
 
@@ -250,14 +260,11 @@ def stopCondition(stop_type, itr, convergens=0.5):
         return False if convergens < alpha else True
     
 def maxFunc(a, b):
-    if(len(a) != len(b)):
-        print("/n ERROR: A's length is ", len(a) , " len B is ", len(b))
-        if(len(a) != 1380):
-            print(a[1:30])
-        if(len(b) != 1380):
-            print(b[1:30])
-    maxs = [None] * len(a)
-    for i in range(len(a)):
+    if(len(a)!=len(b)):
+        print('len a: ', len(a), ' -- len b:  ', len(b))
+    lenA = len(a)
+    maxs = [None] * lenA
+    for i in range(lenA):
         maxs[i] = a[i] if a[i] >= b[i] else b[i]
     return maxs
     
@@ -386,3 +393,10 @@ def createSibling(child, p1, p2):
     for i in range(len(child)):
         child2[i] = p2[i] if child[i] == p1[i] else p1[i]
     return child2
+
+def save_to_file(all_attr_max, name):
+    x = np.savetxt(name+'.out', all_attr_max, delimiter = ',') 
+
+def logInConsole(step , message):
+    now = time.strftime('%H:%M:%S')
+    print("\n","LOG STEP ", step, " time: ", now, " : ", message)

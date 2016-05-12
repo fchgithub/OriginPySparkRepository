@@ -4,7 +4,6 @@ Created on Nov 9, 2015
 @author: Fatemeh
 '''
 
-from __future__ import print_function
 from pyspark import SparkContext, SparkConf
 import numpy as np
 from scipy.stats import chisquare
@@ -94,7 +93,7 @@ def cleaning_data(data):
     return None
 
 def toVector(line):
-        return  np.array([float(x) for x in line.split('\t')])
+        return  np.array([float(x) for x in line.split(',')])
         
     
 def main():
@@ -104,11 +103,14 @@ def main():
         - Changes from laptop captioned: "Laptop-Date" like Laptop-April-14-2016
         - Changes from PC captioned: "PC-Date" like PC-April-14-2016
     '''
-    spark_conf = SparkConf().setAppName("Different-Sampling data").setMaster("local[12]")
+    spark_conf = SparkConf().setAppName("Different-Sampling data").setMaster("local[*]")
     sc = SparkContext(conf= spark_conf)
-    rdd = sc.textFile('/user/kddhadoop/inputs/pre-data.txt') #, minPartitions = 10)
-#    rdd = sc.textFile('D:\DataSetCollection\FMA.csv' , minPartitions = 1)
+    #rdd = sc.textFile('/user/kddhadoop/inputs/pre-data.txt')#, minPartitions = 7)
+    GA.logInConsole(0, "input file read!")
+    rdd = sc.textFile('/fatemeh/inputs/FMA-1.csv', minPartitions=10)
     vectorRDD = rdd.map(toVector)
+    print(vectorRDD.count())
+    GA.logInConsole(0 , "Data Vectorized!")
     #print(vectorRDD.first())
     #rdd.unpersist()
     #myODHD = ODHD_Ensemble()
@@ -117,8 +119,8 @@ def main():
     #sampleRDD = myODHD.spark_self_Sampling(vectorRDD, percetage_of_sample)
     #data_dimension = len(vectorRDD.first())
     #print('data dimension: ', data_dimension)
-    GA.Parallel_GA_main(vectorRDD,sc)#, sizeOfDataset, data_dimension)
-    
+    #maxall = vectorRDD.reduce(GA.maxFunc)
+    #GA.Parallel_GA_main(vectorRDD,sc)#, sizeOfDataset, data_dimension)
     sc.stop()
     
 if __name__ == "__main__":
