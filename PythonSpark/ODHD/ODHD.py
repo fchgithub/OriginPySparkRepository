@@ -121,6 +121,7 @@ def main():
     #print('data dimension: ', data_dimension)
     #maxall = vectorRDD.reduce(GA.maxFunc)
     #GA.Parallel_GA_main(vectorRDD,sc)#, sizeOfDataset, data_dimension)
+    print('this is a test from laptop May 17')
     sc.stop()
     
 if __name__ == "__main__":
