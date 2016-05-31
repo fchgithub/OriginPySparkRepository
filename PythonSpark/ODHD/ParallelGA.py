@@ -23,21 +23,22 @@ popNum = 4 # choose it always an even number
 crossover_rate = 0.7
 mutation_rate = 0.2
 dimLength = 0  #takes the number of dimension of high dimension data set 
-numofGeneration = 3
+numofGeneration = 10
+k = 10
 
 
 def Parallel_GA_main(rdd, sc):
     logInConsole(1, "main method started!")
     rngdivision = [4]
     prjSizes = [3]
-    KMeansModel.clusterCenters().foreach(pr)
+#     KMeansModel.clusterCenters().foreach(pr)
     logInConsole(2, "REDUCE IN PROGRESS: Getting Min and Max of all data dimensions: START!")
     # pre-proccessing step to find min and max of attributes just once not everytime in running code 
 #     all_attr_maxs = rdd.reduce(maxFunc)
-#     save_to_file(all_attr_maxs, 'max3')
+#     save_to_file(all_attr_maxs, 'max')
 #     logInConsole(2, "REDUCE IN PROGRESS: Getting done Max of all data dimensions: Done!")
 #     all_attr_mins = rdd.reduce(minFunc)
-#     save_to_file(all_attr_mins, 'min2')
+#     save_to_file(all_attr_mins, 'min')
 
     all_attr_maxs = np.loadtxt("max.out", delimiter = ',')
     all_attr_mins = np.loadtxt('min.out', delimiter = ',')
@@ -48,6 +49,7 @@ def Parallel_GA_main(rdd, sc):
     sizeOfDataset = 500 #rdd.count()
     rdd.cache()
     logInConsole(3, "Computing fitness function for all genes: START!")
+    topKElegant = []
     for psize in prjSizes:
         for rng in rngdivision:
             population = generatePop(dimLength, psize)
@@ -57,19 +59,24 @@ def Parallel_GA_main(rdd, sc):
             while itr < numofGeneration:
                 print ('\nCurrent iterations:', itr)
                 rankedPopulation = rankedPop(population[:popNum], rdd, all_attr_maxs, all_attr_mins, sizeOfDataset, rng,sc)
+                topKElegant = merge(rankedPopulation, topKElegant)
+                topKElegant = remove_duplicate(topKElegant)
+                if(len(topKElegant) > k):
+                    topKElegant = topKElegant[:k]
                 tempPrintrankedPopulation(rankedPopulation)
                 logInConsole(4, "Done: tempPrintrankedPopulation")
                 population = iteratePop(rankedPopulation)
                 logInConsole(5, 'Done : crossover and mutation')
                 
                 itr += 1
+            print('\nFinal list if ellegant after ', itr, ' is: ', topKElegant)    
     #rankedPopulation = rankedPop(population, rdd, all_attr_maxs, all_attr_mins, sizeOfDataset, rngdivision[0])           
 
 #     localtime = time.asctime( time.localtime(time.time()) )
 #     print("Program_Stop:", localtime)    
 #     print('\nProgram Terminated!')
 #     print('\nSet of Solutions: ', rankedPopulation)
-
+    
     
 def rankedPop(population, rdd, all_attr_maxs, all_attr_mins, sizeOfDataset, prjrng, sc):
     #rankedPopulation = fitnessFunc_integrated(rdd, population, all_attr_maxs, all_attr_mins, sizeOfDataset, prjrng, sc)
@@ -410,3 +417,36 @@ def save_to_file(all_attr_max, name):
 def logInConsole(step , message):
     now = time.strftime('%H:%M:%S')
     print("\n","LOG STEP ", step, " time: ", now, " : ", message)
+    
+def merge(a, b):
+    """
+    a and b are two sorted lists
+    """
+    i = 0
+    j = 0
+    c =  []
+    while i < len(a) and j < len(b) and len(c) < k:
+        if a[i][1] > b[j][1]:
+            c.append(a[i])
+            i += 1
+        else:
+            c.append(b[j])
+            j += 1
+    if i < len(a):
+        while i < len(a)and len(c) < k:
+            c.append(a[i])
+            i += 1
+    if j < len(b):
+        while j < len(b)and len(c) < k:
+            c.append(b[j])
+            j += 1
+    return c
+
+def remove_duplicate(rankedList):
+    output = []
+    seen = []
+    for value in rankedList:
+        if value[0] not in seen:
+            output.append(value)
+            seen.append(value[0])
+    return output       
