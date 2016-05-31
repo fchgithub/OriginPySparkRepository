@@ -1,7 +1,7 @@
 '''
 Created on Jan 21, 2016
 
-@author: Fatemeh (try pull)
+@author: Fatemeh (try pull second tiem)
 '''
 from __future__ import  print_function
 import random
