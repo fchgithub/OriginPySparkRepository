@@ -67,7 +67,7 @@ class ODHD_Ensemble(object):
         '''
         return None
     
-    def spark_self_Sampling(self, rdd, percentage):
+    def spark_self_sampling(self, rdd, percentage):
     
         '''rdd.takeSample(False, number_of_samples, seed = 10)
             Return a fixed-size sampled subset of this RDD.
@@ -90,38 +90,31 @@ def data_reduction():
 def cleaning_data(data):
     ''' It's a pre-processing step to clean data: Dealing with missing data, finding correlations, reduce the size of data
     '''
-    return None
+    pass
 
 def toVector(line):
-        return  np.array([float(x) for x in line.split(',')])
+    return  np.array([float(x) for x in line.split('\t')])
         
     
 def main():
     '''
-        All setup with Git
         Instruction:
-        - Changes from laptop captioned: "Laptop-Date" like Laptop-April-14-2016
-        - Changes from PC captioned: "PC-Date" like PC-April-14-2016
+        - Changes from laptop captioned by: "Laptop-Date" like Laptop-April-14-2016
+        - Changes from PC captioned by: "PC-Date" like PC-April-14-2016
     '''
     spark_conf = SparkConf().setAppName("Different-Sampling data").setMaster("local[*]")
     sc = SparkContext(conf= spark_conf)
     #rdd = sc.textFile('/user/kddhadoop/inputs/pre-data.txt')#, minPartitions = 7)
     GA.logInConsole(0, "input file read!")
-    rdd = sc.textFile('/fatemeh/inputs/FMA-1.csv', minPartitions=10)
+    rdd = sc.textFile('pre-data.txt', minPartitions=1)
     vectorRDD = rdd.map(toVector)
-    print(vectorRDD.count())
     GA.logInConsole(0 , "Data Vectorized!")
-    #print(vectorRDD.first())
-    #rdd.unpersist()
-    #myODHD = ODHD_Ensemble()
-    #percetage_of_sample = 0.3
-    #sizeOfDataset = vectorRDD.count()  
-    #sampleRDD = myODHD.spark_self_Sampling(vectorRDD, percetage_of_sample)
-    #data_dimension = len(vectorRDD.first())
-    #print('data dimension: ', data_dimension)
-    #maxall = vectorRDD.reduce(GA.maxFunc)
-    #GA.Parallel_GA_main(vectorRDD,sc)#, sizeOfDataset, data_dimension)
-    print('branches except master delted')
+#     myODHD = ODHD_Ensemble()
+#     percetage_of_sample = 0.5
+#     sampleVecRDD = myODHD.spark_self_sampling(vectorRDD, percetage_of_sample)
+#     print('\nSample rdd has this much elements: ', sampleVecRDD.count())
+    GA.Parallel_GA_main(vectorRDD,sc)
+    GA.logInConsole(100, "\nend of program")
     sc.stop()
     
 if __name__ == "__main__":
