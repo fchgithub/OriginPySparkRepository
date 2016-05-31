@@ -19,7 +19,7 @@ class ODHD_Ensemble(object):
     subspace_lst = []
     def __init__(self):
         '''
-        Constructor
+        Constructor of the class
         '''
         # static member of the class; accessible out side of class via ODHD_Ensemble.subSpaceList
         ODHD_Ensemble.subSpaceList = []  
