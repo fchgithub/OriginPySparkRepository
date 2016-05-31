@@ -13,33 +13,39 @@ import math
 import itertools
 import time
 import CustomKey
+from cmath import polar
+from pyspark import mllib
+from pyspark.mllib.clustering import KMeans
+
 # Global Variables
-ellitNum = 1
-popNum = 4
+percentage_of_ellite = 0.1
+popNum = 4 # choose it always an even number
 crossover_rate = 0.7
 mutation_rate = 0.2
-dimLength = 0
-numofGeneration = 1
+dimLength = 0  #takes the number of dimension of high dimension data set 
+numofGeneration = 3
+topKSubspace = []
 
 def Parallel_GA_main(rdd, sc):
     logInConsole(1, "main method started!")
     rngdivision = [4]
     prjSizes = [3]
+    KMeansModel.clusterCenters().foreach(pr)
     logInConsole(2, "REDUCE IN PROGRESS: Getting Min and Max of all data dimensions: START!")
     # pre-proccessing step to find min and max of attributes just once not everytime in running code 
-    #all_attr_maxs = rdd.reduce(maxFunc)
-    #save_to_file(all_attr_maxs, 'max3')
-    #logInConsole(2, "REDUCE IN PROGRESS: Getting done Max of all data dimensions: Done!")
-    #all_attr_mins = rdd.reduce(minFunc)
-    #save_to_file(all_attr_mins, 'min2')
+#     all_attr_maxs = rdd.reduce(maxFunc)
+#     save_to_file(all_attr_maxs, 'max3')
+#     logInConsole(2, "REDUCE IN PROGRESS: Getting done Max of all data dimensions: Done!")
+#     all_attr_mins = rdd.reduce(minFunc)
+#     save_to_file(all_attr_mins, 'min2')
 
-    all_attr_maxs = np.loadtxt("/home/kddhadoop/DataInputs/max.out", delimiter = ',')
-    all_attr_mins = np.loadtxt('/home/kddhadoop/DataInputs/min.out', delimiter = ',')
+    all_attr_maxs = np.loadtxt("max.out", delimiter = ',')
+    all_attr_mins = np.loadtxt('min.out', delimiter = ',')
     logInConsole(2, "REDUCE IN PROGRESS: Getting Min and Max of all data dimensions: FINISH!")
     # to change the value of a global variable
     global dimLength
     dimLength = len(all_attr_maxs)
-    sizeOfDataset = 77000#rdd.count()
+    sizeOfDataset = 500 #rdd.count()
     rdd.cache()
     logInConsole(3, "Computing fitness function for all genes: START!")
     for psize in prjSizes:
@@ -50,9 +56,11 @@ def Parallel_GA_main(rdd, sc):
     # while not stopCondition(1, itr):
             while itr < numofGeneration:
                 print ('\nCurrent iterations:', itr)
-                rankedPopulation = rankedPop(population, rdd, all_attr_maxs, all_attr_mins, sizeOfDataset, rng,sc)
+                rankedPopulation = rankedPop(population[:popNum], rdd, all_attr_maxs, all_attr_mins, sizeOfDataset, rng,sc)
                 tempPrintrankedPopulation(rankedPopulation)
+                logInConsole(4, "Done: tempPrintrankedPopulation")
                 population = iteratePop(rankedPopulation)
+                logInConsole(5, 'Done : crossover and mutation')
                 
                 itr += 1
     #rankedPopulation = rankedPop(population, rdd, all_attr_maxs, all_attr_mins, sizeOfDataset, rngdivision[0])           
@@ -65,11 +73,11 @@ def Parallel_GA_main(rdd, sc):
     
 def rankedPop(population, rdd, all_attr_maxs, all_attr_mins, sizeOfDataset, prjrng, sc):
     #rankedPopulation = fitnessFunc_integrated(rdd, population, all_attr_maxs, all_attr_mins, sizeOfDataset, prjrng, sc)
-    rankedPopulation = fintessFunc_perInd(rdd, population, all_attr_maxs, all_attr_mins, sizeOfDataset, prjrng, sc)
+    rankedPopulation = fintessFunc_perInd(rdd, population, all_attr_maxs, all_attr_mins, sizeOfDataset, prjrng)
     rankedPopulation.sort(key=lambda tup: tup[1], reverse=True)  
     return rankedPopulation
 
-def fintessFunc_perInd(rdd, population, all_attr_maxs, all_attr_mins, sizeOfDataset, prjrng, sc):
+def fintessFunc_perInd(rdd, population, all_attr_maxs, all_attr_mins, sizeOfDataset, prjrng):
         rankedPopulation = list()
         for individual in population:
             fitness = fitnessFunc(rdd, individual, all_attr_maxs, all_attr_mins, sizeOfDataset, prjrng)
@@ -81,9 +89,11 @@ def iteratePop(rankedPopulation):
     fitnessScores = [item[1] for item in rankedPopulation]
     rankedIndividuals = [item[0] for item in rankedPopulation]
     newpop = []
-    ellite = rankedPopulation[:popNum // 15]
-    newpop.extend(ellite)  # known as elitism, conserve the best solutions to new population
-    while len(newpop) != popNum:
+    ellitNum = math.ceil(popNum * percentage_of_ellite) 
+    ellite = rankedPopulation[:ellitNum]
+    for element in ellite:
+        newpop.append(element[0])  # known as elitism, conserve the best solutions to new population
+    while len(newpop) <= popNum:
         ch1, ch2 = [], []
         ch1, ch2 = selectFittest (fitnessScores, rankedIndividuals)  # select two of the fittest chromos
         
@@ -109,13 +119,9 @@ def fitnessFunc(rdd, individual, all_attr_maxs, all_attr_mins, sizeOfDataset, pr
     
     num_of_cells = prjRng ** len(individual)
    
-    #map2CellRDD = rdd.map(lambda point: (assign2Cell(point, individual, \
-    #                                                 maxs, mins, prjRng), 1))
-    map2CellRDD = rdd.map(lambda p : (2,1))
-    map2CellRDD.first()
+    map2CellRDD = rdd.map(lambda point: (assign2Cell(point, individual, \
+                                                     maxs, mins, prjRng), 1))
     sumPointsInCellRDD = map2CellRDD.reduceByKey(lambda a, b: a + b)
-    map2CellRDD.unpersist()
-    sumPointsInCellRDD.cache()
     cellsWithPoint = sumPointsInCellRDD.count()
     
     aver = float(sizeOfDataset) / num_of_cells 
@@ -161,7 +167,10 @@ def selectFittest (fitnessScores, rankedIndividuals):
     return ch1, ch2
         
 def crossover(individual1, individual2):
-    
+    '''
+        common dimensions left unchanged, the remaining are selected randomly
+        To Do: take some greedy approaches in selecting new dimensions 
+    '''
     cmmFields = list(set(individual1) & set(individual2))
     notCmmFields = list((set(individual1) - set(individual2)) | (set(individual2) - set(individual1))) 
     notCmmFields.sort()
@@ -231,10 +240,11 @@ def generatePop(dimension, projectionSize):
     '''
     population, individual = [], []
     rangeDimension = range(dimension)
-    for eachIndividual in range(popNum):
+    while len(population) != popNum:
         individual = random.sample(rangeDimension, projectionSize)
         individual.sort()
         population.append(individual)
+        population = [list(t) for t in set(map(tuple, population))]
     return population
 
 def tempGeneratePop(dimension, projectionSize):
@@ -244,7 +254,7 @@ def tempGeneratePop(dimension, projectionSize):
     for i in range(dimension):
         lst[i] = i
     
-    return [list(x)for x in set(itertools.combinations(lst, projectionSize))]
+    return [list(x) for x in set(itertools.combinations(lst, projectionSize))]
 
 def tempPrintrankedPopulation(rankedPopulation):
     print("\n")
