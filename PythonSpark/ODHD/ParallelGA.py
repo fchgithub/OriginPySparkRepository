@@ -24,7 +24,7 @@ crossover_rate = 0.7
 mutation_rate = 0.2
 dimLength = 0  #takes the number of dimension of high dimension data set 
 numofGeneration = 3
-topKSubspace = []
+
 
 def Parallel_GA_main(rdd, sc):
     logInConsole(1, "main method started!")
