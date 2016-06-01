@@ -1,37 +1,33 @@
 '''
 Created on Jan 21, 2016
 
-@author: Fatemeh (try pull second tiem)
+@author: Fatemeh 
 '''
 from __future__ import  print_function
 import random
 import numpy as np
 import functools
 from operator import add
-import operator
 import math
 import itertools
 import time
 import CustomKey
 from cmath import polar
-from pyspark import mllib
-from pyspark.mllib.clustering import KMeans
 
 # Global Variables
-percentage_of_ellite = 0.1
-popNum = 4 # choose it always an even number
+percentage_of_ellite = 0.5
+popNum = 10 # choose it always an even number
 crossover_rate = 0.7
 mutation_rate = 0.2
 dimLength = 0  #takes the number of dimension of high dimension data set 
 numofGeneration = 10
-k = 10
+k = 20
 
 
 def Parallel_GA_main(rdd, sc):
     logInConsole(1, "main method started!")
-    rngdivision = [4]
+    rngdivision = [5]
     prjSizes = [3]
-#     KMeansModel.clusterCenters().foreach(pr)
     logInConsole(2, "REDUCE IN PROGRESS: Getting Min and Max of all data dimensions: START!")
     # pre-proccessing step to find min and max of attributes just once not everytime in running code 
 #     all_attr_maxs = rdd.reduce(maxFunc)
@@ -50,32 +46,33 @@ def Parallel_GA_main(rdd, sc):
     rdd.cache()
     logInConsole(3, "Computing fitness function for all genes: START!")
     topKElegant = []
+    solutions = []
     for psize in prjSizes:
         for rng in rngdivision:
             population = generatePop(dimLength, psize)
-            #population = tempGeneratePop(dimLength, psize)    
+#             population = tempGeneratePop(dimLength, psize)
+#             population = [[0,2,5], [0,2,3],[1,2,5]]   
             itr = 0
     # while not stopCondition(1, itr):
             while itr < numofGeneration:
                 print ('\nCurrent iterations:', itr)
                 rankedPopulation = rankedPop(population[:popNum], rdd, all_attr_maxs, all_attr_mins, sizeOfDataset, rng,sc)
-                topKElegant = merge(rankedPopulation, topKElegant)
-                topKElegant = remove_duplicate(topKElegant)
+                topKElegant = remove_duplicate(merge(rankedPopulation, topKElegant))
                 if(len(topKElegant) > k):
                     topKElegant = topKElegant[:k]
+                print('\nFinal list of elegant after ', itr, ' is: ', topKElegant)  
                 tempPrintrankedPopulation(rankedPopulation)
                 logInConsole(4, "Done: tempPrintrankedPopulation")
                 population = iteratePop(rankedPopulation)
                 logInConsole(5, 'Done : crossover and mutation')
                 
                 itr += 1
-            print('\nFinal list if ellegant after ', itr, ' is: ', topKElegant)    
+            
+            solutions.append(topKElegant)  
+            topKElegant = []
     #rankedPopulation = rankedPop(population, rdd, all_attr_maxs, all_attr_mins, sizeOfDataset, rngdivision[0])           
 
-#     localtime = time.asctime( time.localtime(time.time()) )
-#     print("Program_Stop:", localtime)    
-#     print('\nProgram Terminated!')
-#     print('\nSet of Solutions: ', rankedPopulation)
+    print('\nSet of Solutions: ', solutions)
     
     
 def rankedPop(population, rdd, all_attr_maxs, all_attr_mins, sizeOfDataset, prjrng, sc):
