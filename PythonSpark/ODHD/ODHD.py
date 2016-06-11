@@ -9,7 +9,8 @@ import numpy as np
 from scipy.stats import chisquare
 import ParallelGA as GA
 import profile
-import pstats
+from pyspark.mllib.feature import Normalizer
+import SSD
 
 class ODHD_Ensemble(object):
     '''
@@ -74,46 +75,23 @@ class ODHD_Ensemble(object):
             it's a list of sample data; not another RDD (not applicable since we need an rdd)
             Note: rdd.sample returns PipelinedRDD which is a subclass of RDD and inherits all APIs which RDD has
         '''
-        return rdd.sample(False, percentage, seed = 10)
+        return rdd.sample(False, percentage, seed = 10)    # End of Class ODHD    
     
-    
-    
-    def genetic_algorithm(self, sampleData):
-    
-        return
-    # End of Class ODHD    
-    
-def data_reduction():
-    
-    return None
-    
-def cleaning_data(data):
-    ''' It's a pre-processing step to clean data: Dealing with missing data, finding correlations, reduce the size of data
-    '''
-    pass
-
 def toVector(line):
-    return  np.array([float(x) for x in line.split('\t')])
-        
-    
+    return  np.array([float(x) for x in line.split('\t')])    
+   
 def main():
-    '''
-        Instruction:
-        - Changes from laptop captioned by: "Laptop-Date" like Laptop-April-14-2016
-        - Changes from PC captioned by: "PC-Date" like PC-April-14-2016
-    '''
-    spark_conf = SparkConf().setAppName("Different-Sampling data").setMaster("local[*]")
+    spark_conf = SparkConf().setAppName("Different-Sampling data").setMaster('local[*]')
     sc = SparkContext(conf= spark_conf)
-    #rdd = sc.textFile('/user/kddhadoop/inputs/pre-data.txt')#, minPartitions = 7)
     GA.logInConsole(0, "input file read!")
     rdd = sc.textFile('pre-data.txt', minPartitions=1)
+    print('\nNumber of Partitions for this run: ', rdd.getNumPartitions())
     vectorRDD = rdd.map(toVector)
     GA.logInConsole(0 , "Data Vectorized!")
-#     myODHD = ODHD_Ensemble()
-#     percetage_of_sample = 0.5
-#     sampleVecRDD = myODHD.spark_self_sampling(vectorRDD, percetage_of_sample)
-#     print('\nSample rdd has this much elements: ', sampleVecRDD.count())
-    GA.Parallel_GA_main(vectorRDD,sc)
+    normalizer = Normalizer()
+    norm = normalizer.transform(vectorRDD)
+    #GA.Parallel_GA_main(norm,sc)
+    SSD.outlierDetection()
     GA.logInConsole(100, "\nend of program")
     sc.stop()
     

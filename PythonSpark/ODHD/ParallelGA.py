@@ -12,24 +12,23 @@ import math
 import itertools
 import time
 import CustomKey
-from cmath import polar
+from pyspark.mllib.feature import Normalizer
 
 # Global Variables
 percentage_of_ellite = 0.5
-popNum = 10 # choose it always an even number
+popNum = 20 # choose it always an even number
 crossover_rate = 0.7
 mutation_rate = 0.2
 dimLength = 0  #takes the number of dimension of high dimension data set 
-numofGeneration = 10
+numofGeneration = -1
 k = 20
 
 
 def Parallel_GA_main(rdd, sc):
     logInConsole(1, "main method started!")
-    rngdivision = [5]
+    rngdivision = [6,7]
     prjSizes = [3]
     logInConsole(2, "REDUCE IN PROGRESS: Getting Min and Max of all data dimensions: START!")
-    # pre-proccessing step to find min and max of attributes just once not everytime in running code 
 #     all_attr_maxs = rdd.reduce(maxFunc)
 #     save_to_file(all_attr_maxs, 'max')
 #     logInConsole(2, "REDUCE IN PROGRESS: Getting done Max of all data dimensions: Done!")
@@ -39,7 +38,6 @@ def Parallel_GA_main(rdd, sc):
     all_attr_maxs = np.loadtxt("max.out", delimiter = ',')
     all_attr_mins = np.loadtxt('min.out', delimiter = ',')
     logInConsole(2, "REDUCE IN PROGRESS: Getting Min and Max of all data dimensions: FINISH!")
-    # to change the value of a global variable
     global dimLength
     dimLength = len(all_attr_maxs)
     sizeOfDataset = 500 #rdd.count()
@@ -49,18 +47,22 @@ def Parallel_GA_main(rdd, sc):
     solutions = []
     for psize in prjSizes:
         for rng in rngdivision:
-            population = generatePop(dimLength, psize)
-#             population = tempGeneratePop(dimLength, psize)
+#             population = generatePop(dimLength, psize)
+            population = tempGeneratePop(dimLength, psize)
 #             population = [[0,2,5], [0,2,3],[1,2,5]]   
             itr = 0
     # while not stopCondition(1, itr):
             while itr < numofGeneration:
                 print ('\nCurrent iterations:', itr)
-                rankedPopulation = rankedPop(population[:popNum], rdd, all_attr_maxs, all_attr_mins, sizeOfDataset, rng,sc)
-                topKElegant = remove_duplicate(merge(rankedPopulation, topKElegant))
-                if(len(topKElegant) > k):
-                    topKElegant = topKElegant[:k]
-                print('\nFinal list of elegant after ', itr, ' is: ', topKElegant)  
+                rankedPopulation = rankedPop(population[:popNum], rdd, all_attr_maxs, all_attr_mins, sizeOfDataset, rng)
+                '''
+                    for now just keep all solutions created in the GA iterations
+                '''
+                solutions.append(rankedPopulation)
+#                 topKElegant = remove_duplicate(merge(rankedPopulation, topKElegant))
+#                 if(len(topKElegant) > k):
+#                     topKElegant = topKElegant[:k]
+#                 print('\nFinal list of elegant after ', itr, ' is: ', topKElegant)  
                 tempPrintrankedPopulation(rankedPopulation)
                 logInConsole(4, "Done: tempPrintrankedPopulation")
                 population = iteratePop(rankedPopulation)
@@ -70,12 +72,10 @@ def Parallel_GA_main(rdd, sc):
             
             solutions.append(topKElegant)  
             topKElegant = []
-    #rankedPopulation = rankedPop(population, rdd, all_attr_maxs, all_attr_mins, sizeOfDataset, rngdivision[0])           
-
-    print('\nSet of Solutions: ', solutions)
+            rankedPopulation = rankedPop(population, rdd, all_attr_maxs, all_attr_mins, sizeOfDataset, rng)           
+    return rankedPopulation
     
-    
-def rankedPop(population, rdd, all_attr_maxs, all_attr_mins, sizeOfDataset, prjrng, sc):
+def rankedPop(population, rdd, all_attr_maxs, all_attr_mins, sizeOfDataset, prjrng):
     #rankedPopulation = fitnessFunc_integrated(rdd, population, all_attr_maxs, all_attr_mins, sizeOfDataset, prjrng, sc)
     rankedPopulation = fintessFunc_perInd(rdd, population, all_attr_maxs, all_attr_mins, sizeOfDataset, prjrng)
     rankedPopulation.sort(key=lambda tup: tup[1], reverse=True)  
@@ -123,12 +123,14 @@ def fitnessFunc(rdd, individual, all_attr_maxs, all_attr_mins, sizeOfDataset, pr
     
     num_of_cells = prjRng ** len(individual)
    
-    map2CellRDD = rdd.map(lambda point: (assign2Cell(point, individual, \
+   
+    map2CellRDD = rdd.map(lambda point: (assign2Cell(point[individual], individual, \
                                                      maxs, mins, prjRng), 1))
     sumPointsInCellRDD = map2CellRDD.reduceByKey(lambda a, b: a + b)
     cellsWithPoint = sumPointsInCellRDD.count()
     
-    aver = float(sizeOfDataset) / num_of_cells 
+#    aver = float(sizeOfDataset) / num_of_cells
+    aver = float(sizeOfDataset) / cellsWithPoint 
     emptyCells = num_of_cells - cellsWithPoint
     zigma = 150
     '''
@@ -140,6 +142,7 @@ def fitnessFunc(rdd, individual, all_attr_maxs, all_attr_mins, sizeOfDataset, pr
 #                                          reduce(add) + emptyCells 
     fitnessValue = emptyCells + sumPointsInCellRDD.map(lambda x: ((aver - x[1]) / aver) ** 3 if x[1] <= aver else 0).reduce(add) 
     return fitnessValue
+
 def fitnessFunc_integrated(rdd, population, all_attr_maxs, all_attr_mins, sizeOfDataset, prjRng, sc):
     
     unionRdd = sc.emptyRDD()
@@ -202,7 +205,6 @@ def mutation(individual):
                 else:
                     continue
     return individual
-
 
 def roulette_Selection (fitnessScores):
     # Source: http://www.obitko.com/tutorials/genetic-algorithms/selection.php
@@ -292,11 +294,12 @@ def assign2Cell(point, projectionDims, mins, maxs, divisionsNum):
     cellLoc = []
     ind = 0
     projectionSize = len(projectionDims)
-    for dim in projectionDims:
+    for k in range(projectionSize):
         divRange = np.linspace(0, 1, divisionsNum + 1)
         try:
             ''' Normalizing data between 0 and 1'''
-            nrmPoint = (point[dim] - mins[ind]) / (maxs[ind] - mins[ind])
+            #nrmPoint = (point[dim] - mins[ind]) / (maxs[ind] - mins[ind])
+            nrmPoint = point[k]
             for i in range(1, len(divRange)):  # to avoid -1 when point[i]==0
                 if nrmPoint <= divRange[i]:
                     cellLoc.append(i - 1)
