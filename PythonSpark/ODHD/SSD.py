@@ -1,5 +1,5 @@
 import numpy as np
-
+# I want this changes on VM
 def outlierDetection(vectorRDD, subspaces):
     all_attr_maxs = np.loadtxt("max.out", delimiter = ',')
     all_attr_mins = np.loadtxt('min.out', delimiter = ',')

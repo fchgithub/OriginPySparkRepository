@@ -3,6 +3,7 @@ Created on Nov 9, 2015
 
 @author: Fatemeh
 '''
+# I want this changes on VM
 from __future__ import  print_function
 from pyspark import SparkContext, SparkConf
 import numpy as np

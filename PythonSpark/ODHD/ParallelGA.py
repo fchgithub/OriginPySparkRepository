@@ -3,6 +3,7 @@ Created on Jan 21, 2016
 
 @author: Fatemeh 
 '''
+# I want this changes on VM
 from __future__ import  print_function, division
 import random
 import numpy as np
