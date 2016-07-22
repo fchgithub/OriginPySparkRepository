@@ -3,15 +3,14 @@ Created on Nov 9, 2015
 
 @author: Fatemeh
 '''
-
+from __future__ import  print_function
 from pyspark import SparkContext, SparkConf
 import numpy as np
-from scipy.stats import chisquare
+# from scipy.stats import chisquare
 import ParallelGA as GA
 import profile
 from pyspark.mllib.feature import Normalizer
 import SSD
-
 class ODHD_Ensemble(object):
     '''
         ODHD_Ensemble is a class to find the subspaces in a high-dimensional by benefit of GA on some sample of main data (forming an ensemble)
@@ -29,7 +28,7 @@ class ODHD_Ensemble(object):
         ''' calculate X-distribution for the selected attribute
             check R packages that how to use existed method in R (avoiding to implement by myself) 
         ''' 
-        chisquare(attr)
+#         chisquare(attr)
         return 10
     
     def attr_uniform_disribution(self, attr):
@@ -77,25 +76,59 @@ class ODHD_Ensemble(object):
         '''
         return rdd.sample(False, percentage, seed = 10)    # End of Class ODHD    
     
-def toVector(line):
-    return  np.array([float(x) for x in line.split('\t')])    
-   
+def toVector(line, splitter):
+    tokenized = line.split(splitter)
+    return  np.array([float(tokenized[x]) for x in range(0,len(tokenized)-2)])    
+
+def voted_subsapces():
+    pass
+
+def pre_process_normalize(rdd):
+    
+    all_attr_maxs = rdd.reduce(maxFunc)
+    all_attr_mins = rdd.reduce(minFunc)
+    '''
+    np.savetxt('max.out', all_attr_max, delimiter = ',') 
+    all_attr_maxs = np.loadtxt("max.out", delimiter = ',')
+    '''
+    normalizeDataRDD = rdd.map(lambda point: pre_normalize(point, all_attr_mins, all_attr_maxs, ln))
+    f = normalizeDataRDD.collect()
+    np.savetxt('/home/fatemeh/Data/saveData.txt', f)
+    
+def pre_normalize(input, mins, maxs, ln):
+    for i in range(ln):
+       input[i] = (input[i]-mins[i])/(maxs[i]-mins[i])   
+    return (input)   
+
 def main():
     spark_conf = SparkConf().setAppName("Different-Sampling data").setMaster('local[*]')
+    spark_conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     sc = SparkContext(conf= spark_conf)
     GA.logInConsole(0, "input file read!")
-    rdd = sc.textFile('pre-data.txt', minPartitions=1)
-    print('\nNumber of Partitions for this run: ', rdd.getNumPartitions())
-    vectorRDD = rdd.map(toVector)
+    rdd = sc.textFile("/home/fatemeh/Data/saveData.txt",  minPartitions= 500, use_unicode=False)
+    rdd.unpersist()
+#     print('\nNumber of Partitions for this run: ', rdd.getNumPartitions())
+    vectorRDD = rdd.map(lambda line: toVector(line, splitter = ' '))
+    
     GA.logInConsole(0 , "Data Vectorized!")
-    normalizer = Normalizer()
-    norm = normalizer.transform(vectorRDD)
-    #GA.Parallel_GA_main(norm,sc)
-    SSD.outlierDetection()
+    ss = list()
+    GA.logInConsole(-1, 'Start the ensemble')
+    GA.logInConsole(-10, "GA with range 3")
+    ss.append(GA.parallel_GA_main(vectorRDD,sc, 5))
+#     GA.logInConsole(-10, "GA with range 4")
+#     ss.append(GA.parallel_GA_main(norm,sc, 4))
+#     GA.logInConsole(-10, "GA with range 5")
+#     ss.append(GA.parallel_GA_main(norm,sc, 5))
+#     GA.logInConsole(-10, "GA with range 3 and Sampled data set")
+#    sampleRDD = norm.sample(False, 0.6, seed=10)
+#    ss.append(GA.parallel_GA_main(sampleRDD,sc, 3))
+    print(ss)
+    #selectedSS = voted_subsapces(ss)
+#     SSD.outlierDetection(vectorRDD, ss)
     GA.logInConsole(100, "\nend of program")
     sc.stop()
     
 if __name__ == "__main__":
     main()
-    #profile.run("main()")
+    profile.run("main()")
     
