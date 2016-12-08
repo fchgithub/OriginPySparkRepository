@@ -16,11 +16,12 @@ import time
 import datetime
 from pyspark.mllib.stat import Statistics
 from pyspark import SparkContext, SparkConf
+from _ast import Subscript
 
 
 def parallel_GA_main(sc, rdd, divisionRange):
     populationSize = 50
-    generationsNumber = 20
+    generationsNumber = 50
      
     ellitePercentage = 0.2
     crossover_rate = 0.7
@@ -50,7 +51,8 @@ def parallel_GA_main(sc, rdd, divisionRange):
             rankedPopulation = population_ranking(population[:populationSize], datasetSize, rng, hash_dict, rdd ,sc)
             solution.append(rankedPopulation)
             rankedPopulation_unhashed = unhash_population(rankedPopulation, hash_dict)
-            #write_to_S3(rankedPopulation_unhashed, itr, sc)
+            #write_to_S3(rankedPopulation_unhashed, itr, sc, "/home/fatemeh/Data/Datasets/output/ODHD")
+            write2File(itr, rankedPopulation_unhashed, "/home/fatemeh/Data/Datasets/output/ODHD")
             population = iterate_population(rankedPopulation, populationSize, ellitePercentage, new_individual_feed_rate, crossover_rate,
                                             mutation_rate, hash_dict, seenBefore, dimensionSize, prjSize)
             itr += 1
@@ -187,15 +189,28 @@ def chi_test(list_, num_of_cells):
     grid_cells = list_ + [0]*(num_of_cells - len(list_))
     avrg = sum(list_)/len(grid_cells)
     vect = [(x-avrg)**2 for x in grid_cells]
-    return sum(vect)/avrg
+    return round((sum(vect)/avrg), 2)
     
-def write_to_S3(information, itr, sc, dir="s3://kddlabs3bucket/output/ODHD/"):
-    st = datetime.datetime.fromtimestamp(time.time()).strftime('%m%d%H%M%S')
-    path_ = dir + 'run-' + st
-    path_ += '--' + str(itr)
+def write_to_S3(information, itr, sc, dir="s3://kddlabs3bucket/output/odhd/"):
+    #st = datetime.datetime.fromtimestamp(time.time()).strftime('%m%d%H%M%S')
+    path_ = dir + 'run'# + st
+    path_ +=  str(itr)
     sc.parallelize(information).saveAsTextFile(path_)
     return
 
+def write_to_console(rankedPopulation, itr, hash_dict):
+    print("Iteration "+str(itr)+": ")
+    for ind in rankedPopulation:
+        print(hash_dict[ind[0]])
+        print(" : "+str(ind[1]))
+
+def write2File(itration, subspaceList, path):
+    currentRun = path + "/" + str(itration)+ ".txt"
+    file = open(currentRun, 'w+')
+    file.write("Iteration %s:\n" % itration)
+    for subspace in subspaceList:
+        file.write("%s\n" % str(subspace))
+    return
 
 def selectFittest (fitnessScores, rankedIndividuals):
     while 1 == 1: 
@@ -511,16 +526,17 @@ def toVector(line, splitter):
     return  np.array([float(tokenized[x]) for x in range(0,len(tokenized)-2)])      
 
 def load_data(sc):
-    rdd = sc.textFile("/home/fatemeh/Data/Datasets/wdbc_UndersampledM_Normalized.csv",  minPartitions= 500, use_unicode=False)
+    #rdd = sc.textFile("s3://kddlabs3bucket/Data/wdbcundersampledmnormalized.csv",  minPartitions= 500, use_unicode=False)
+    rdd = sc.textFile("/home/fatemeh/Data/Datasets/wdbc_UndersampledM_Normalized.csv", use_unicode=False)
     vectorRDD = rdd.map(lambda line: toVector(line, splitter = ' '))
     return vectorRDD
 
 def main():
-    spark_conf = SparkConf().setAppName("Different-Sampling data").setMaster('local[*]')
+    spark_conf = SparkConf().setAppName("Different-Sampling data")
     spark_conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     sc = SparkContext(conf= spark_conf)
     rdd = load_data(sc)  
-       
+    print(rdd.getNumPartitions())
     parallel_GA_main(sc, rdd, 5)
     
     sc.stop()
